@@ -3,7 +3,7 @@
 
 // Where the settings page is hosted. Put watchface-settings.html in your GitHub Pages repo
 // and change this to its address.
-var CONFIG_URL = 'https://eddieatjollyroger.github.io/Pebble-HA-TV-Remote/watchface-settings.html';
+var CONFIG_URL = 'https://eddieatjollyroger.github.io/Pebble-Terminal-Watchface/';
 
 var REFRESH_MS = 30 * 60 * 1000;
 
