@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <title>Terminal Watchface Settings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        /* Same terminal style as the remote's page, in two palettes (this page only). */
+        :root, :root[data-theme="dark"] {
+            --bg: #000000; --fg: #00ff55; --dim: #00a83a; --line: #00a83a;
+            --btn-bg: #00ff55; --btn-fg: #000000; --btn-hover-bg: #000000; --btn-hover-fg: #00ff55;
+        }
+        :root[data-theme="light"] {
+            --bg: #ffffff; --fg: #000000; --dim: #555555; --line: #555555;
+            --btn-bg: #000000; --btn-fg: #ffffff; --btn-hover-bg: #ffffff; --btn-hover-fg: #000000;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; padding: 20px; background: var(--bg); color: var(--fg);
+            font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 15px; line-height: 1.4;
+        }
+        .wrap { max-width: 480px; margin: 0 auto; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+        h1 { font-size: 18px; margin: 0; font-weight: 700; }
+        .cursor { animation: blink 1s steps(1) infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) { .cursor { animation: none; } }
+        .divider { border: 0; border-top: 1px dashed var(--line); margin: 0 0 16px; }
+
+        .card { padding: 20px; border: 1px dashed var(--line); margin-bottom: 16px; }
+        h2 { font-size: 14px; margin: 0 0 14px; color: var(--dim); font-weight: 600; }
+        h2 .prompt { color: var(--fg); }
+        .item { margin-bottom: 18px; }
+        .item:last-child { margin-bottom: 0; }
+        label.field { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; color: var(--dim); }
+        .note { color: var(--dim); font-size: 13px; margin: 6px 0 0; }
+
+        input[type="text"], select {
+            width: 100%; padding: 12px; background: var(--bg); color: var(--fg);
+            border: 1px solid var(--line); border-radius: 0; font-family: inherit;
+            font-size: 16px;            /* 16px stops iOS from zooming on focus */
+            caret-color: var(--fg);
+        }
+        select { appearance: none; -webkit-appearance: none; }
+        input::placeholder { color: var(--dim); opacity: 0.7; }
+        input:focus, select:focus, button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+        /* "[x] / [ ]" checkboxes */
+        .check { display: flex; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; position: relative; }
+        .check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+        .check .box::before { content: "[ ]"; color: var(--dim); }
+        .check input:checked + .box::before { content: "[x]"; color: var(--fg); }
+        .check input:focus-visible + .box { outline: 2px solid var(--fg); outline-offset: 2px; }
+        .check .name { color: var(--fg); }
+        .check .sample { color: var(--dim); margin-left: auto; font-size: 13px; }
+
+        button { font-family: inherit; cursor: pointer; border-radius: 0; }
+        #save_btn {
+            width: 100%; padding: 14px; background: var(--btn-bg); color: var(--btn-fg);
+            border: 1px solid var(--btn-bg); font-weight: 700; font-size: 16px;
+            transition: background 0.2s, color 0.2s;
+        }
+        #save_btn:hover { background: var(--btn-hover-bg); color: var(--btn-hover-fg); }
+        .small-btn {
+            background: transparent; color: var(--dim); border: 1px solid var(--line);
+            padding: 6px 10px; font-size: 13px; white-space: nowrap;
+        }
+        .small-btn:hover { color: var(--fg); border-color: var(--fg); }
+        #reset_btn { margin-top: 12px; width: 100%; padding: 10px; }
+
+        pre.preview { margin: 0; color: var(--fg); font-size: 13px; line-height: 1.5; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="topbar">
+            <h1># Watchface Settings<span class="cursor">_</span></h1>
+            <button id="theme_btn" class="small-btn" type="button" aria-pressed="false">theme: dark</button>
+        </div>
+        <hr class="divider">
+
+        <div class="card">
+            <h2><span class="prompt">$ </span>prompt</h2>
+            <div class="item">
+                <label class="field" for="prompt">Name shown at the top and bottom</label>
+                <input id="prompt" type="text" maxlength="12" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="user@pebble">
+                <p class="note">Up to 12 characters: letters, numbers and @ . _ ~ -</p>
+            </div>
+            <div class="item">
+                <pre class="preview" id="preview"></pre>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2><span class="prompt">$ </span>complications</h2>
+            <label class="check"><input type="checkbox" data-comp="time"><span class="box"></span><span class="name">[TIME]</span><span class="sample">10:13 PM</span></label>
+            <label class="check"><input type="checkbox" data-comp="date"><span class="box"></span><span class="name">[DATE]</span><span class="sample">Dec 7, Fri</span></label>
+            <label class="check"><input type="checkbox" data-comp="temp"><span class="box"></span><span class="name">[TEMP]</span><span class="sample">18C Showers</span></label>
+            <label class="check"><input type="checkbox" data-comp="batt"><span class="box"></span><span class="name">[BATT]</span><span class="sample">[####.] 86%</span></label>
+            <label class="check"><input type="checkbox" data-comp="step"><span class="box"></span><span class="name">[STEP]</span><span class="sample">6472 steps</span></label>
+            <label class="check"><input type="checkbox" data-comp="dist"><span class="box"></span><span class="name">[DIST]</span><span class="sample">4.8 km</span></label>
+            <label class="check"><input type="checkbox" data-comp="hr"><span class="box"></span><span class="name">[L_HR]</span><span class="sample">54 BPM</span></label>
+            <p class="note">Steps, distance and heart rate only appear on watches that provide that data. Turning off [TEMP] also stops the weather and location lookups.</p>
+        </div>
+
+        <div class="card">
+            <h2><span class="prompt">$ </span>units and options</h2>
+            <div class="item">
+                <label class="field" for="temp_unit">Temperature</label>
+                <select id="temp_unit">
+                    <option value="auto">auto (Fahrenheit on US English phones)</option>
+                    <option value="c">Celsius</option>
+                    <option value="f">Fahrenheit</option>
+                </select>
+            </div>
+            <div class="item">
+                <label class="field" for="dist_unit">Distance</label>
+                <select id="dist_unit">
+                    <option value="auto">auto (miles on US English phones)</option>
+                    <option value="km">Kilometers</option>
+                    <option value="mi">Miles</option>
+                </select>
+            </div>
+            <div class="item">
+                <label class="check"><input type="checkbox" id="seconds"><span class="box"></span><span class="name">show seconds on wrist flick</span></label>
+                <p class="note">Seconds show for 15 seconds, then it goes back to saving battery.</p>
+            </div>
+        </div>
+
+        <button id="save_btn" type="button">Save Settings</button>
+        <button id="reset_btn" class="small-btn" type="button">Reset to defaults</button>
+    </div>
+
+    <script>
+    var DEFAULTS = {
+        prompt: 'user@pebble', temp_unit: 'auto', dist_unit: 'auto', seconds: true,
+        comps: { time: true, date: true, temp: true, batt: true, step: true, dist: true, hr: true }
+    };
+
+    function getQueryParam(variable) {
+        var vars = window.location.search.substring(1).split('&');
+        for (var i = 0; i < vars.length; i++) {
+            var pair = vars[i].split('=');
+            if (pair[0] === variable && pair[1] !== undefined) return decodeURIComponent(pair[1]);
+        }
+        return '';
+    }
+
+    // Theme for this page only (the watchface itself stays black)
+    var root = document.documentElement;
+    var themeBtn = document.getElementById('theme_btn');
+    function applyTheme(theme) {
+        root.setAttribute('data-theme', theme);
+        themeBtn.textContent = 'theme: ' + theme;
+        themeBtn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+    }
+    var startTheme = 'dark';
+    try {
+        var stored = localStorage.getItem('pebble_wf_theme');
+        if (stored === 'light' || stored === 'dark') startTheme = stored;
+    } catch (e) { }
+    applyTheme(startTheme);
+    themeBtn.addEventListener('click', function() {
+        var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        try { localStorage.setItem('pebble_wf_theme', next); } catch (e) { }
+    });
+
+    // Fill the form from the settings the phone passed in (falls back to defaults)
+    function applyToForm(s) {
+        document.getElementById('prompt').value = s.prompt;
+        document.getElementById('temp_unit').value = s.temp_unit;
+        document.getElementById('dist_unit').value = s.dist_unit;
+        document.getElementById('seconds').checked = !!s.seconds;
+        var boxes = document.querySelectorAll('input[data-comp]');
+        for (var i = 0; i < boxes.length; i++) boxes[i].checked = !!s.comps[boxes[i].getAttribute('data-comp')];
+        updatePreview();
+    }
+
+    function readForm() {
+        var comps = {};
+        var boxes = document.querySelectorAll('input[data-comp]');
+        for (var i = 0; i < boxes.length; i++) comps[boxes[i].getAttribute('data-comp')] = boxes[i].checked;
+        return {
+            prompt: document.getElementById('prompt').value.replace(/[^A-Za-z0-9@._~-]/g, '').substring(0, 12) || DEFAULTS.prompt,
+            temp_unit: document.getElementById('temp_unit').value,
+            dist_unit: document.getElementById('dist_unit').value,
+            seconds: document.getElementById('seconds').checked,
+            comps: comps
+        };
+    }
+
+    function updatePreview() {
+        var p = (document.getElementById('prompt').value.replace(/[^A-Za-z0-9@._~-]/g, '') || DEFAULTS.prompt);
+        document.getElementById('preview').textContent = p + ':~ $ now\n' + p + ':~ $ _';
+    }
+
+    var initial = JSON.parse(JSON.stringify(DEFAULTS));
+    try {
+        var passed = JSON.parse(getQueryParam('s') || 'null');
+        if (passed) {
+            ['prompt', 'temp_unit', 'dist_unit', 'seconds'].forEach(function(k) { if (passed[k] !== undefined) initial[k] = passed[k]; });
+            Object.keys(DEFAULTS.comps).forEach(function(k) {
+                if (passed.comps && passed.comps[k] !== undefined) initial.comps[k] = !!passed.comps[k];
+            });
+        }
+    } catch (e) { }
+    applyToForm(initial);
+
+    document.getElementById('prompt').addEventListener('input', updatePreview);
+    document.getElementById('reset_btn').addEventListener('click', function() { applyToForm(DEFAULTS); });
+
+    document.getElementById('save_btn').addEventListener('click', function() {
+        var return_to = getQueryParam('return_to') || 'pebblejs://close#';
+        document.location = return_to + encodeURIComponent(JSON.stringify(readForm()));
+    });
+    </script>
+</body>
+</html>
